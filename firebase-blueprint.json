@@ -1,0 +1,480 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account metadata stored under users/{userId}.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "role": {
+          "type": "string",
+          "enum": ["researcher"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "name", "email", "role", "createdAt", "updatedAt"]
+    },
+    "DocumentRecord": {
+      "title": "DocumentRecord",
+      "description": "Uploaded source document metadata and extracted plain text.",
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "fileType": {
+          "type": "string",
+          "enum": ["pdf", "docx", "txt", "csv"]
+        },
+        "fileSize": {
+          "type": "number"
+        },
+        "fileURL": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "extractedText": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "factCount": {
+          "type": "number"
+        },
+        "uploadDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "documentId",
+        "userId",
+        "fileName",
+        "fileType",
+        "fileSize",
+        "fileURL",
+        "extractedText",
+        "factCount",
+        "uploadDate",
+        "updatedAt"
+      ]
+    },
+    "KnowledgeFact": {
+      "title": "KnowledgeFact",
+      "description": "Structured subject-predicate-object fact stored in the Knowledge Base.",
+      "type": "object",
+      "properties": {
+        "factId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "documentName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "predicate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "sourceText": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "factType": {
+          "type": "string",
+          "enum": ["extracted", "inferred", "manual"]
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["verified", "unverified", "inferred"]
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "ruleApplied": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "factId",
+        "userId",
+        "documentId",
+        "documentName",
+        "subject",
+        "predicate",
+        "object",
+        "sourceText",
+        "factType",
+        "verificationStatus",
+        "confidence",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InferenceRule": {
+      "title": "InferenceRule",
+      "description": "Deterministic symbolic IF-THEN rule stored in the rules collection.",
+      "type": "object",
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "conclusion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "ruleType": {
+          "type": "string",
+          "enum": ["if-then", "taxonomy", "transitivity", "property-inheritance", "equivalence"]
+        },
+        "antecedentSubject": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "antecedentPredicate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "antecedentObject": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "secondPredicate": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "consequentPredicate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "consequentObject": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ruleId",
+        "userId",
+        "name",
+        "condition",
+        "conclusion",
+        "ruleType",
+        "antecedentSubject",
+        "antecedentPredicate",
+        "antecedentObject",
+        "secondPredicate",
+        "consequentPredicate",
+        "consequentObject",
+        "enabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "QuestionRecord": {
+      "title": "QuestionRecord",
+      "description": "User question, deterministic symbolic answer, and reasoning trace.",
+      "type": "object",
+      "properties": {
+        "questionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "questionType": {
+          "type": "string",
+          "enum": ["what", "who", "when", "where", "why", "how", "yes-no", "list", "relationship", "unknown"]
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10000
+        },
+        "reasoning": {
+          "type": "string",
+          "maxLength": 15000
+        },
+        "reasoningSteps": {
+          "type": "array"
+        },
+        "matchedFactIds": {
+          "type": "array"
+        },
+        "inferredFactIds": {
+          "type": "array"
+        },
+        "strategyUsed": {
+          "type": "string",
+          "enum": [
+            "rule-based",
+            "forward-chaining",
+            "backward-chaining",
+            "exact-keyword",
+            "logical-inference",
+            "insufficient-evidence"
+          ]
+        },
+        "answered": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "questionId",
+        "userId",
+        "documentId",
+        "question",
+        "questionType",
+        "answer",
+        "reasoning",
+        "reasoningSteps",
+        "matchedFactIds",
+        "inferredFactIds",
+        "strategyUsed",
+        "answered",
+        "timestamp"
+      ]
+    },
+    "EvaluationRecord": {
+      "title": "EvaluationRecord",
+      "description": "Evaluation test case and deterministic benchmark outcome.",
+      "type": "object",
+      "properties": {
+        "evaluationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "expectedAnswer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "generatedAnswer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "result": {
+          "type": "string",
+          "enum": ["TP", "FP", "FN", "TN"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pass", "Fail"]
+        },
+        "score": {
+          "type": "number"
+        },
+        "strategyUsed": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "evaluationId",
+        "userId",
+        "documentId",
+        "question",
+        "expectedAnswer",
+        "generatedAnswer",
+        "result",
+        "status",
+        "score",
+        "strategyUsed",
+        "timestamp"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Private user account profiles restricted to the owner."
+    },
+    "/documents/{documentId}": {
+      "schema": {
+        "$ref": "#/entities/DocumentRecord"
+      },
+      "description": "Uploaded documents and extracted text owned by userId."
+    },
+    "/knowledgeBase/{factId}": {
+      "schema": {
+        "$ref": "#/entities/KnowledgeFact"
+      },
+      "description": "Extracted, inferred, and manually curated Knowledge Base triples."
+    },
+    "/rules/{ruleId}": {
+      "schema": {
+        "$ref": "#/entities/InferenceRule"
+      },
+      "description": "Symbolic IF-THEN and logical inference rules owned by userId."
+    },
+    "/questions/{questionId}": {
+      "schema": {
+        "$ref": "#/entities/QuestionRecord"
+      },
+      "description": "Question answering history and expandable reasoning traces."
+    },
+    "/evaluations/{evaluationId}": {
+      "schema": {
+        "$ref": "#/entities/EvaluationRecord"
+      },
+      "description": "Benchmark evaluation test cases and confusion matrix outcomes."
+    }
+  }
+}

@@ -1,0 +1,339 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(uid) {
+      return isVerified() && request.auth.uid == uid;
+    }
+
+    function isStringBounded(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidBoundedStringList(arr, maxItems) {
+      return arr is list
+        && arr.size() <= maxItems
+        && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 500));
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['userId', 'name', 'email', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'name', 'email', 'photoURL', 'role', 'createdAt', 'updatedAt'])
+        && isValidId(data.userId)
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && isStringBounded(data.name, 1, 120)
+        && isStringBounded(data.email, 3, 200)
+        && (!('photoURL' in data) || isStringBounded(data.photoURL, 0, 500))
+        && data.role == 'researcher'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDocumentRecord(data, documentId) {
+      return data.keys().hasAll([
+          'documentId', 'userId', 'fileName', 'fileType', 'fileSize',
+          'fileURL', 'extractedText', 'factCount', 'uploadDate', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'documentId', 'userId', 'fileName', 'fileType', 'fileSize',
+          'fileURL', 'extractedText', 'factCount', 'uploadDate', 'updatedAt'
+        ])
+        && isValidId(data.documentId)
+        && data.documentId == documentId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isStringBounded(data.fileName, 1, 255)
+        && data.fileType in ['pdf', 'docx', 'txt', 'csv']
+        && data.fileSize is number && data.fileSize >= 0 && data.fileSize <= 52428800
+        && isStringBounded(data.fileURL, 0, 2000)
+        && isStringBounded(data.extractedText, 0, 200000)
+        && data.factCount is number && data.factCount >= 0 && data.factCount <= 50000
+        && data.uploadDate is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidKnowledgeFact(data, factId) {
+      return data.keys().hasAll([
+          'factId', 'userId', 'documentId', 'documentName', 'subject',
+          'predicate', 'object', 'sourceText', 'factType', 'verificationStatus',
+          'confidence', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'factId', 'userId', 'documentId', 'documentName', 'subject',
+          'predicate', 'object', 'sourceText', 'factType', 'verificationStatus',
+          'confidence', 'ruleApplied', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.factId)
+        && data.factId == factId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.documentId)
+        && isStringBounded(data.documentName, 1, 255)
+        && isStringBounded(data.subject, 1, 200)
+        && isStringBounded(data.predicate, 1, 120)
+        && isStringBounded(data.object, 1, 300)
+        && isStringBounded(data.sourceText, 0, 1000)
+        && data.factType in ['extracted', 'inferred', 'manual']
+        && data.verificationStatus in ['verified', 'unverified', 'inferred']
+        && data.confidence is number && data.confidence >= 0 && data.confidence <= 100
+        && (!('ruleApplied' in data) || isStringBounded(data.ruleApplied, 0, 200))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInferenceRule(data, ruleId) {
+      return data.keys().hasAll([
+          'ruleId', 'userId', 'name', 'condition', 'conclusion', 'ruleType',
+          'antecedentSubject', 'antecedentPredicate', 'antecedentObject',
+          'secondPredicate', 'consequentPredicate', 'consequentObject',
+          'enabled', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ruleId', 'userId', 'name', 'condition', 'conclusion', 'ruleType',
+          'antecedentSubject', 'antecedentPredicate', 'antecedentObject',
+          'secondPredicate', 'consequentPredicate', 'consequentObject',
+          'enabled', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.ruleId)
+        && data.ruleId == ruleId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isStringBounded(data.name, 1, 150)
+        && isStringBounded(data.condition, 1, 500)
+        && isStringBounded(data.conclusion, 1, 500)
+        && data.ruleType in ['if-then', 'taxonomy', 'transitivity', 'property-inheritance', 'equivalence']
+        && isStringBounded(data.antecedentSubject, 0, 150)
+        && isStringBounded(data.antecedentPredicate, 1, 120)
+        && isStringBounded(data.antecedentObject, 0, 200)
+        && isStringBounded(data.secondPredicate, 0, 120)
+        && isStringBounded(data.consequentPredicate, 1, 120)
+        && isStringBounded(data.consequentObject, 0, 200)
+        && data.enabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuestionRecord(data, questionId) {
+      return data.keys().hasAll([
+          'questionId', 'userId', 'documentId', 'question', 'questionType',
+          'answer', 'reasoning', 'reasoningSteps', 'matchedFactIds',
+          'inferredFactIds', 'strategyUsed', 'answered', 'timestamp'
+        ])
+        && data.keys().hasOnly([
+          'questionId', 'userId', 'documentId', 'question', 'questionType',
+          'answer', 'reasoning', 'reasoningSteps', 'matchedFactIds',
+          'inferredFactIds', 'strategyUsed', 'answered', 'timestamp'
+        ])
+        && isValidId(data.questionId)
+        && data.questionId == questionId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.documentId)
+        && isStringBounded(data.question, 1, 1000)
+        && data.questionType in ['what', 'who', 'when', 'where', 'why', 'how', 'yes-no', 'list', 'relationship', 'unknown']
+        && isStringBounded(data.answer, 1, 10000)
+        && isStringBounded(data.reasoning, 0, 15000)
+        && isValidBoundedStringList(data.reasoningSteps, 30)
+        && isValidBoundedStringList(data.matchedFactIds, 50)
+        && isValidBoundedStringList(data.inferredFactIds, 50)
+        && data.strategyUsed in [
+          'rule-based', 'forward-chaining', 'backward-chaining',
+          'exact-keyword', 'logical-inference', 'insufficient-evidence'
+        ]
+        && data.answered is bool
+        && data.timestamp is timestamp;
+    }
+
+    function isValidEvaluationRecord(data, evaluationId) {
+      return data.keys().hasAll([
+          'evaluationId', 'userId', 'documentId', 'question', 'expectedAnswer',
+          'generatedAnswer', 'result', 'status', 'score', 'strategyUsed', 'timestamp'
+        ])
+        && data.keys().hasOnly([
+          'evaluationId', 'userId', 'documentId', 'question', 'expectedAnswer',
+          'generatedAnswer', 'result', 'status', 'score', 'strategyUsed', 'timestamp'
+        ])
+        && isValidId(data.evaluationId)
+        && data.evaluationId == evaluationId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.documentId)
+        && isStringBounded(data.question, 1, 1000)
+        && isStringBounded(data.expectedAnswer, 1, 2000)
+        && isStringBounded(data.generatedAnswer, 1, 5000)
+        && data.result in ['TP', 'FP', 'FN', 'TN']
+        && data.status in ['Pass', 'Fail']
+        && data.score is number && data.score >= 0 && data.score <= 100
+        && isStringBounded(data.strategyUsed, 1, 80)
+        && data.timestamp is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Users (Strict PII Isolation: owner get/write only, no list)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().userId == existing().userId
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'photoURL', 'updatedAt']);
+      allow delete: if isValidId(userId) && isOwner(userId);
+    }
+
+    // 2. Documents
+    match /documents/{documentId} {
+      allow get: if isValidId(documentId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && existing().userId == request.auth.uid;
+      allow create: if isValidId(documentId)
+        && isVerified()
+        && isValidDocumentRecord(incoming(), documentId)
+        && incoming().uploadDate == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(documentId)
+        && isVerified()
+        && existing().userId == request.auth.uid
+        && isValidDocumentRecord(incoming(), documentId)
+        && incoming().documentId == existing().documentId
+        && incoming().userId == existing().userId
+        && incoming().uploadDate == existing().uploadDate
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['factCount', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['extractedText', 'factCount', 'updatedAt'])
+        );
+      allow delete: if isValidId(documentId) && isVerified() && existing().userId == request.auth.uid;
+    }
+
+    // 3. Knowledge Base Facts
+    match /knowledgeBase/{factId} {
+      allow get: if isValidId(factId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && existing().userId == request.auth.uid;
+      allow create: if isValidId(factId)
+        && isVerified()
+        && isValidKnowledgeFact(incoming(), factId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          incoming().documentId == 'manual' ||
+          (
+            exists(/databases/$(database)/documents/documents/$(incoming().documentId)) &&
+            get(/databases/$(database)/documents/documents/$(incoming().documentId)).data.userId == request.auth.uid
+          )
+        );
+      allow update: if isValidId(factId)
+        && isVerified()
+        && existing().userId == request.auth.uid
+        && isValidKnowledgeFact(incoming(), factId)
+        && incoming().factId == existing().factId
+        && incoming().userId == existing().userId
+        && incoming().documentId == existing().documentId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'subject', 'predicate', 'object', 'sourceText', 'verificationStatus', 'confidence', 'updatedAt'
+          ]) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['verificationStatus', 'updatedAt'])
+        );
+      allow delete: if isValidId(factId) && isVerified() && existing().userId == request.auth.uid;
+    }
+
+    // 4. Symbolic Rules
+    match /rules/{ruleId} {
+      allow get: if isValidId(ruleId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && existing().userId == request.auth.uid;
+      allow create: if isValidId(ruleId)
+        && isVerified()
+        && isValidInferenceRule(incoming(), ruleId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(ruleId)
+        && isVerified()
+        && existing().userId == request.auth.uid
+        && isValidInferenceRule(incoming(), ruleId)
+        && incoming().ruleId == existing().ruleId
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['enabled', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'condition', 'conclusion', 'ruleType',
+            'antecedentSubject', 'antecedentPredicate', 'antecedentObject',
+            'secondPredicate', 'consequentPredicate', 'consequentObject',
+            'enabled', 'updatedAt'
+          ])
+        );
+      allow delete: if isValidId(ruleId) && isVerified() && existing().userId == request.auth.uid;
+    }
+
+    // 5. Question Answering History
+    match /questions/{questionId} {
+      allow get: if isValidId(questionId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && existing().userId == request.auth.uid;
+      allow create: if isValidId(questionId)
+        && isVerified()
+        && isValidQuestionRecord(incoming(), questionId)
+        && incoming().timestamp == request.time
+        && (
+          incoming().documentId == 'all' ||
+          (
+            exists(/databases/$(database)/documents/documents/$(incoming().documentId)) &&
+            get(/databases/$(database)/documents/documents/$(incoming().documentId)).data.userId == request.auth.uid
+          )
+        );
+      allow update: if false;
+      allow delete: if isValidId(questionId) && isVerified() && existing().userId == request.auth.uid;
+    }
+
+    // 6. Evaluation Results
+    match /evaluations/{evaluationId} {
+      allow get: if isValidId(evaluationId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && existing().userId == request.auth.uid;
+      allow create: if isValidId(evaluationId)
+        && isVerified()
+        && isValidEvaluationRecord(incoming(), evaluationId)
+        && incoming().timestamp == request.time;
+      allow update: if false;
+      allow delete: if isValidId(evaluationId) && isVerified() && existing().userId == request.auth.uid;
+    }
+  }
+}

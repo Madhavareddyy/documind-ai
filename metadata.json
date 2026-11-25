@@ -1,0 +1,6 @@
+{
+  "name": "DocuMind AI",
+  "description": "Intelligent Document Question Answering System using Knowledge Representation, Rule-Based Reasoning, and Logical Inference.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
